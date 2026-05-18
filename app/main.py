@@ -7,18 +7,13 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.api.v1.weather import router as weather_router
 from app.api.v1.health import router as health_router
+from app.middlewares.logging_middleware import LoggingMiddleware
+from app.core.limiter import limiter
 
-# Настройка логгера
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s:%(name)s:time='%(asctime)s' %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
-)
-
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"],
-    storage_uri=settings.REDIS_URL
 )
 
 app = FastAPI(
@@ -26,6 +21,8 @@ app = FastAPI(
     debug=settings.DEBUG,
     version="1.0.0"
 )
+
+app.add_middleware(LoggingMiddleware)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

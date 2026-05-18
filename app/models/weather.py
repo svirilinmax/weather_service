@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Index
 from app.database import Base
 
 
@@ -13,7 +13,11 @@ class WeatherRequest(Base):
     humidity = Column(Integer, nullable=False)
     units = Column(String(1), nullable=False)
     is_cached = Column(Boolean, default=False, nullable=False)
-
     timestamp = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    __table_args__ = (
+        Index('idx_city_timestamp', 'city', 'timestamp'),
+        Index('idx_timestamp', 'timestamp'),
     )
