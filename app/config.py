@@ -11,11 +11,13 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int
     POSTGRES_DB: str
     DATABASE_URL: str
+    REDIS_URL: str
 
     WEATHER_API_KEY: str
     WEATHER_API_URL: str
 
     RATE_LIMIT_PER_MINUTE: int = 30
+    WEATHER_CACHE_TTL_SECONDS: int = 300
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

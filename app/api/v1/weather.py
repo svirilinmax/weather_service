@@ -1,23 +1,24 @@
 import csv
+import json
 from io import StringIO
-
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-
-
-
+import redis
 
 from app.database import get_db
 from app.models.weather import WeatherRequest
-from app.schemas.weather import WeatherResponse
+from app.schemas.weather import WeatherResponse, WeatherHistoryResponse
 from app.services.weather_api import WeatherAPIClient
-from app.schemas.weather import WeatherHistoryResponse
+from app.config import settings
 
 router = APIRouter(prefix="/weather", tags=["Weather"])
 weather_client = WeatherAPIClient()
+
+
+redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
 
 
 @router.get("", response_model=WeatherResponse)
@@ -28,19 +29,17 @@ async def get_weather(
 ):
     api_units = "metric" if units == "celsius" else "imperial"
     db_units_letter = "C" if units == "celsius" else "F"
-    time_threshold = datetime.now(timezone.utc) - timedelta(minutes=5)
 
-    cached_record = db.query(WeatherRequest).filter(WeatherRequest.city.ilike(city),
-        WeatherRequest.units == db_units_letter,
-        WeatherRequest.timestamp >= time_threshold
-    ).order_by(desc(WeatherRequest.timestamp)).first()
+    cache_key = f"weather:{city.lower().strip()}:{db_units_letter}"
+    cached_data_raw = redis_client.get(cache_key)
 
-    if cached_record:
+    if cached_data_raw:
+        cached_data = json.loads(cached_data_raw)
         new_request = WeatherRequest(
-            city=cached_record.city,
-            temperature=cached_record.temperature,
-            description=cached_record.description,
-            humidity=cached_record.humidity,
+            city=cached_data["city"],
+            temperature=cached_data["temperature"],
+            description=cached_data["description"],
+            humidity=cached_data["humidity"],
             units=db_units_letter,
             is_cached=True
         )
@@ -61,6 +60,14 @@ async def get_weather(
         resolved_city_name = weather_data["name"]
     except KeyError:
         raise HTTPException(status_code=500, detail="Ошибка парсинга данных внешнего API")
+
+    cache_payload = {
+        "city": resolved_city_name,
+        "temperature": temp,
+        "description": description,
+        "humidity": humidity
+    }
+    redis_client.setex(cache_key, settings.WEATHER_CACHE_TTL_SECONDS, json.dumps(cache_payload))
 
     new_request = WeatherRequest(
         city=resolved_city_name,

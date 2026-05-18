@@ -6,11 +6,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db
 
-router = APIRouter(prefix="/health", tags=["Infrastructure"])
+router = APIRouter(prefix="", tags=["Infrastructure"])
 logger = logging.getLogger("weather_logger")
 
 
-@router.get("")
+@router.get("/health")
 def health_check(db: Session = Depends(get_db)):
     start_time = time.time()
     try:
