@@ -5,7 +5,6 @@ import fakeredis
 import pytest
 from sqlalchemy.orm import Session
 
-from app.models.weather import WeatherRequest
 from app.schemas.enums import TemperatureUnit
 from app.services.weather_cache import WeatherCacheService, logger
 
@@ -95,7 +94,7 @@ class TestWeatherCacheService:
             description="солнечно",
             humidity=65,
             units="C",
-            is_cached=False
+            is_cached=False,
         )
 
         assert weather.city == "Moscow"
@@ -115,7 +114,7 @@ class TestWeatherCacheService:
             "city": "Moscow",
             "temperature": 20.5,
             "description": "солнечно",
-            "humidity": 65
+            "humidity": 65,
         }
 
         await cache_service._save_to_redis(cache_key, cached_data)
@@ -135,9 +134,11 @@ class TestWeatherCacheService:
         mock_api_response = {
             "name": "Berlin",
             "main": {"temp": 22.0, "humidity": 70},
-            "weather": [{"description": "облачно"}]
+            "weather": [{"description": "облачно"}],
         }
-        cache_service.api_client.get_current_weather = AsyncMock(return_value=mock_api_response)
+        cache_service.api_client.get_current_weather = AsyncMock(
+            return_value=mock_api_response
+        )
 
         result = await cache_service.get_or_fetch(
             db_session_mock, "Berlin", TemperatureUnit.CELSIUS
@@ -163,7 +164,9 @@ class TestWeatherCacheService:
     async def test_get_or_fetch_api_parse_error(self, cache_service, db_session_mock):
         """Тест: ошибка парсинга ответа API"""
         mock_api_response = {"invalid": "response"}
-        cache_service.api_client.get_current_weather = AsyncMock(return_value=mock_api_response)
+        cache_service.api_client.get_current_weather = AsyncMock(
+            return_value=mock_api_response
+        )
 
         with pytest.raises(Exception):
             await cache_service.get_or_fetch(
@@ -179,11 +182,11 @@ class TestWeatherCacheService:
         mock_api_response = {
             "name": "Tokyo",
             "main": {"temp": 25.0, "humidity": 60},
-            "weather": [{"description": "солнечно"}]
+            "weather": [{"description": "солнечно"}],
         }
-        service.api_client.get_current_weather = AsyncMock(return_value=mock_api_response)
-
-        original_save = service._save_to_redis
+        service.api_client.get_current_weather = AsyncMock(
+            return_value=mock_api_response
+        )
 
         error_logged = False
 

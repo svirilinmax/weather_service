@@ -1,6 +1,7 @@
 import pytest
 from sqlalchemy import text
-from app.database import get_db, engine, SessionLocal
+
+from app.database import SessionLocal, engine, get_db
 
 
 def test_get_db():

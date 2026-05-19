@@ -1,8 +1,7 @@
-import pytest
-from unittest.mock import patch, AsyncMock
-from sqlalchemy.exc import SQLAlchemyError
+from unittest.mock import AsyncMock, patch
 
-from app.api.v1 import health
+import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 
 def test_health_check_db_error(client, monkeypatch):
@@ -15,8 +14,8 @@ def test_health_check_db_error(client, monkeypatch):
     monkeypatch.setattr(health, "check_external_api", mock_check_external)
 
     with patch(
-            "sqlalchemy.engine.base.Connection.execute",
-            side_effect=SQLAlchemyError("DB error")
+        "sqlalchemy.engine.base.Connection.execute",
+        side_effect=SQLAlchemyError("DB error"),
     ):
         response = client.get("/api/v1/health")
         assert response.status_code == 503

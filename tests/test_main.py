@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from app.main import app
 
 
@@ -34,6 +35,7 @@ def test_openapi_json():
     assert "paths" in data
     assert "/api/v1/weather" in data["paths"]
 
+
 def test_read_root_with_debug():
     """Тест корневого эндпоинта"""
     from app.config import settings
@@ -47,6 +49,7 @@ def test_read_root_with_debug():
         assert "Weather Service" in response.json()["message"]
     finally:
         settings.DEBUG = original_debug
+
 
 def test_root_endpoint_json_response():
     """Тест JSON ответа корневого эндпоинта"""
