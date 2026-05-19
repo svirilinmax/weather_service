@@ -40,7 +40,7 @@
 - **Rate Limiting** — ограничение 30 запросов в минуту на IP (HTTP 429 при превышении)
 - **Health Check** — мониторинг состояния БД и внешнего API
 - **Структурированное логирование** — логи в формате key=value с замерами времени
-- **Валидация входных данных** — защита от XSS и инъекций через Pydantic валидацию
+- **Валидация входных данных** — защита от XSS и инъекций через Pydantic
 - **Dependency Injection** — тестируемая архитектура с возможностью подмены зависимостей
 
 ## Технологический стек
@@ -301,19 +301,31 @@ weather_service/
 │   │   └── weather.py
 │   ├── services/            # Бизнес-логика
 │   │   ├── weather_api.py   # OpenWeatherMap клиент
-│   │   └── weather_cache.py # Сервис кэширования (Dependency Injection)
+│   │   └── weather_cache.py # Сервис кэширования
 │   ├── templates/           # HTML шаблоны
-│   │   └── index.html       # Web интерфейс (безопасный DOM манипуляции)
+│   │   └── index.html       # Web интерфейс
 │   ├── config.py            # Pydantic Settings
 │   ├── database.py          # DB session (с пулом соединений)
 │   └── main.py              # FastAPI приложение
 ├── migrations/              # Alembic миграции
 ├── tests/                   # 47 тестов, 98% покрытие
+│   ├── conftest.py
+│   ├── test_database.py
+│   ├── test_enums.py
+│   ├── test_health.py
+│   ├── test_history.py
+│   ├── test_logging_middleware.py
+│   ├── test_main.py
+│   ├── test_rate_limiter.py
+│   ├── test_weather.py
+│   ├── test_weather_api.py
+│   └── test_weather_cache.py
 ├── docker-compose.yml       # PostgreSQL, Redis, FastAPI с healthcheck
 ├── Dockerfile               # Multi-stage build, non-root user
 ├── entrypoint.sh            # Скрипт запуска с миграциями
-├── requirements.txt
+├── init-db.sh               # Инициализация тестовой БД
 ├── Makefile                 # Утилиты для разработки
+├── requirements.txt
 └── .env.sample
 ```
 
