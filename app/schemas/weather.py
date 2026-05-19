@@ -1,6 +1,7 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List
+
 
 class WeatherResponse(BaseModel):
     city: str
@@ -11,8 +12,8 @@ class WeatherResponse(BaseModel):
     is_cached: bool
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class WeatherHistoryItem(BaseModel):
     id: int
@@ -24,8 +25,8 @@ class WeatherHistoryItem(BaseModel):
     is_cached: bool
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class WeatherHistoryResponse(BaseModel):
     total: int

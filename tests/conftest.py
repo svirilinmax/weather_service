@@ -39,7 +39,7 @@ def db_session():
 
 @pytest.fixture(scope="function")
 def client(db_session):
-    """Тестовый клиент FastAPI с отключенным rate limiter и моканным Redis"""
+    """Тестовый клиент FastAPI с отключенным rate limiter"""
 
     def _get_db_override():
         try:
@@ -58,4 +58,28 @@ def client(db_session):
             yield c
 
     app.dependency_overrides.clear()
-    limiter.enabled = Trueо
+    limiter.enabled = True
+
+
+@pytest.fixture(scope="function")
+def client_with_limiter(db_session):
+    """Тестовый клиент FastAPI С ВКЛЮЧЕННЫМ rate limiter"""
+
+    def _get_db_override():
+        try:
+            yield db_session
+        finally:
+            pass
+
+    limiter.enabled = True
+
+    fake_redis = fakeredis.FakeRedis(decode_responses=True)
+
+    app.dependency_overrides[get_db] = _get_db_override
+
+    with patch("app.api.v1.weather.redis_client", fake_redis):
+        with TestClient(app) as c:
+            yield c
+
+    app.dependency_overrides.clear()
+    limiter.enabled = False
