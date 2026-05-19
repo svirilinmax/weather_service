@@ -135,3 +135,57 @@ def test_get_weather_invalid_city_validation(client):
 
         response = client.get("/api/v1/weather?city=Saint%20Petersburg&units=celsius")
         assert response.status_code == 200
+
+def test_get_weather_redis_connection_error(client, monkeypatch):
+    """Тест ошибки подключения к Redis"""
+    from app.services.weather_cache import WeatherCacheService
+
+    class BrokenRedis:
+        def get(self, *args, **kwargs):
+            raise Exception("Redis connection failed")
+
+        def setex(self, *args, **kwargs):
+            raise Exception("Redis connection failed")
+
+    broken_service = WeatherCacheService(redis_client=BrokenRedis())
+
+    with patch("app.api.v1.weather.cache_service", broken_service):
+        with patch.object(broken_service.api_client, 'get_current_weather') as mock_api:
+            mock_api.return_value = {
+                "name": "Moscow",
+                "main": {"temp": 20.5, "humidity": 65},
+                "weather": [{"description": "ясно"}]
+            }
+
+            response = client.get("/api/v1/weather?city=Moscow&units=celsius")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["city"] == "Moscow"
+
+
+def test_get_weather_redis_get_error(client):
+    """Тест ошибки Redis при GET операции"""
+    from app.services.weather_cache import WeatherCacheService
+
+    class RedisGetError:
+        def get(self, *args, **kwargs):
+            raise Exception("Redis GET error")
+
+        def setex(self, *args, **kwargs):
+            pass
+
+    broken_service = WeatherCacheService(redis_client=RedisGetError())
+
+    with patch("app.api.v1.weather.cache_service", broken_service):
+        with patch.object(broken_service.api_client, 'get_current_weather') as mock_api:
+            mock_api.return_value = {
+                "name": "Berlin",
+                "main": {"temp": 22.0, "humidity": 70},
+                "weather": [{"description": "облачно"}]
+            }
+
+            response = client.get("/api/v1/weather?city=Berlin&units=celsius")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["city"] == "Berlin"
+            assert data["is_cached"] is False

@@ -1,6 +1,8 @@
-from unittest.mock import patch
-
+import pytest
+from unittest.mock import patch, AsyncMock
 from sqlalchemy.exc import SQLAlchemyError
+
+from app.api.v1 import health
 
 
 def test_health_check_db_error(client, monkeypatch):
@@ -13,8 +15,8 @@ def test_health_check_db_error(client, monkeypatch):
     monkeypatch.setattr(health, "check_external_api", mock_check_external)
 
     with patch(
-        "sqlalchemy.engine.base.Connection.execute",
-        side_effect=SQLAlchemyError("DB error"),
+            "sqlalchemy.engine.base.Connection.execute",
+            side_effect=SQLAlchemyError("DB error")
     ):
         response = client.get("/api/v1/health")
         assert response.status_code == 503
@@ -37,4 +39,41 @@ def test_health_check_external_api_error(client, monkeypatch):
     data = response.json()
     assert data["external_api"] == "unreachable"
     assert data["status"] == "degraded"
+    assert data["database"] == "connected"
+
+
+@pytest.mark.asyncio
+async def test_check_external_api_success(monkeypatch):
+    """Тест проверки внешнего API - успех"""
+    from app.api.v1 import health
+
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        ok, duration = await health.check_external_api()
+        assert ok is True
+        assert duration > 0
+
+
+@pytest.mark.asyncio
+async def test_check_external_api_timeout(monkeypatch):
+    """Тест проверки внешнего API - таймаут"""
+    from app.api.v1 import health
+
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_get.side_effect = Exception("Timeout")
+
+        ok, duration = await health.check_external_api()
+        assert ok is False
+        assert duration > 0
+
+
+def test_health_check_all_ok(client, monkeypatch):
+    """Тест: всё работает"""
+    response = client.get("/api/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
     assert data["database"] == "connected"

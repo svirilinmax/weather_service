@@ -1,6 +1,6 @@
 import pytest
-
-from app.database import get_db
+from sqlalchemy import text
+from app.database import get_db, engine, SessionLocal
 
 
 def test_get_db():
@@ -12,3 +12,17 @@ def test_get_db():
 
     with pytest.raises(StopIteration):
         next(db_gen)
+
+
+def test_engine_connection():
+    """Тест соединения с БД"""
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT 1"))
+        assert result.scalar() == 1
+
+
+def test_session_local():
+    """Тест создания сессии"""
+    session = SessionLocal()
+    assert session is not None
+    session.close()
