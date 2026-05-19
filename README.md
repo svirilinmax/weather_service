@@ -5,7 +5,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://www.docker.com/)
-[![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg)](https://pytest-cov.readthedocs.io/)
+[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](https://pytest-cov.readthedocs.io/)
 [![Code style](https://img.shields.io/badge/code%20style-black-black.svg)](https://github.com/psf/black)
 
 ## Оглавление
@@ -34,12 +34,14 @@
 ## Ключевые возможности
 
 - **Получение погоды** — интеграция с OpenWeatherMap API
-- **Умное кэширование** — повторные запросы в течение 5 минут возвращают кэшированные данные с флагом `is_cached`
+- **Умное кэширование** — повторные запросы в течение 5 минут возвращают кэшированные данные с флагом is_cached
 - **История запросов** — пагинация, фильтрация по городу и диапазону дат
 - **Экспорт данных** — выгрузка истории в CSV
 - **Rate Limiting** — ограничение 30 запросов в минуту на IP (HTTP 429 при превышении)
 - **Health Check** — мониторинг состояния БД и внешнего API
 - **Структурированное логирование** — логи в формате key=value с замерами времени
+- **Валидация входных данных** — защита от XSS и инъекций через Pydantic валидацию
+- **Dependency Injection** — тестируемая архитектура с возможностью подмены зависимостей
 
 ## Технологический стек
 
@@ -54,7 +56,7 @@
 | HTTP клиент | httpx (async) |
 | Лимитирование | slowapi |
 | Тестирование | pytest + fakeredis |
-| Контейнеризация | Docker Compose |
+| Контейнеризация | Docker Compose (multi-stage build) |
 
 ---
 
@@ -138,7 +140,7 @@ GET /api/v1/weather?city={city}&units={celsius|fahrenheit}
 
 | Параметр | Тип | Обязательный | Описание |
 |----------|-----|--------------|----------|
-| city | string | Да | Название города |
+| city | string | Да | Название города (буквы, пробелы, дефисы, 1-100 символов) |
 | units | enum | Нет | celsius (default) или fahrenheit |
 
 ### 2. История запросов
@@ -286,7 +288,7 @@ weather_service/
 │   │   ├── health.py        # Health check
 │   │   └── weather.py       # Погода, история, экспорт
 │   ├── core/                # Ядро приложения
-│   │   └── limiter.py       # Rate limiter (shared)
+│   │   └── limiter.py       # Rate limiter
 │   ├── docs/                # Скриншоты для README
 │   │   ├── get_weather.png
 │   │   └── history.png
@@ -298,17 +300,20 @@ weather_service/
 │   │   ├── enums.py         # TemperatureUnit
 │   │   └── weather.py
 │   ├── services/            # Бизнес-логика
-│   │   └── weather_api.py   # OpenWeatherMap клиент
+│   │   ├── weather_api.py   # OpenWeatherMap клиент
+│   │   └── weather_cache.py # Сервис кэширования (Dependency Injection)
 │   ├── templates/           # HTML шаблоны
-│   │   └── index.html       # Web интерфейс
+│   │   └── index.html       # Web интерфейс (безопасный DOM манипуляции)
 │   ├── config.py            # Pydantic Settings
-│   ├── database.py          # DB session
+│   ├── database.py          # DB session (с пулом соединений)
 │   └── main.py              # FastAPI приложение
 ├── migrations/              # Alembic миграции
-├── tests/                   # Тесты (16 тестов, 91% coverage)
-├── docker-compose.yml
-├── Dockerfile
+├── tests/                   # 47 тестов, 98% покрытие
+├── docker-compose.yml       # PostgreSQL, Redis, FastAPI с healthcheck
+├── Dockerfile               # Multi-stage build, non-root user
+├── entrypoint.sh            # Скрипт запуска с миграциями
 ├── requirements.txt
+├── Makefile                 # Утилиты для разработки
 └── .env.sample
 ```
 
@@ -320,27 +325,35 @@ weather_service/
 
 | Компонент | Покрытие |
 |-----------|----------|
-| app/services/weather_api.py | 100% |
-| app/schemas/ | 100% |
-| app/models/ | 100% |
+| app/api/v1/health.py | 100% |
+| app/api/v1/weather.py | 95% |
 | app/config.py | 100% |
-| app/api/v1/weather.py | 84% |
-| app/api/v1/health.py | 88% |
-| **Общее** | **91%** |
+| app/core/limiter.py | 100% |
+| app/database.py | 100% |
+| app/main.py | 97% |
+| app/middlewares/logging_middleware.py | 100% |
+| app/models/weather.py | 100% |
+| app/schemas/enums.py | 100% |
+| app/schemas/weather.py | 100% |
+| app/services/weather_api.py | 100% |
+| app/services/weather_cache.py | 97% |
+| **Общее** | **98%** |
 
 ### Список тестов
 
 ```bash
-
-tests/test_health.py           # 2 теста
-tests/test_history.py          # 4 теста
-tests/test_rate_limiter.py     # 1 тест
-tests/test_weather.py          # 3 теста
-tests/test_weather_api.py      # 4 теста
-tests/test_database.py         # 1 тест
-tests/test_logging_middleware.py # 1 тест
+tests/test_database.py           # 3 теста
+tests/test_enums.py              # 3 теста
+tests/test_health.py             # 5 тестов
+tests/test_history.py            # 4 теста
+tests/test_logging_middleware.py # 3 теста
+tests/test_main.py               # 6 тестов
+tests/test_rate_limiter.py       # 1 тест
+tests/test_weather.py            # 6 тестов
+tests/test_weather_api.py        # 4 теста
+tests/test_weather_cache.py      # 12 тестов
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total: 16 passed, 0 failed
+Total: 47 passed, 0 failed
 ```
 
 ---
@@ -412,6 +425,12 @@ docker-compose exec web alembic revision --autogenerate -m "description"
 
 # Запуск тестов
 docker-compose exec web pytest tests/ -v --cov=app
+
+# Использование Makefile
+make up          # Запустить все сервисы
+make test        # Запустить тесты
+make coverage    # Запустить тесты с покрытием
+make clean       # Очистить volumes и кэш
 ```
 
 ---
