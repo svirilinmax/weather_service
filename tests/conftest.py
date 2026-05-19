@@ -11,6 +11,7 @@ from app.config import settings
 from app.core.limiter import limiter
 from app.database import Base, get_db
 from app.main import app
+from app.services.weather_cache import WeatherCacheService
 
 
 def get_test_database_url():
@@ -39,7 +40,7 @@ def db_session():
 
 @pytest.fixture(scope="function")
 def client(db_session):
-    """Тестовый клиент FastAPI с отключенным rate limiter"""
+    """Тестовый клиент FastAPI с отключенным rate limiter и замоканным Redis"""
 
     def _get_db_override():
         try:
@@ -51,9 +52,16 @@ def client(db_session):
 
     fake_redis = fakeredis.FakeRedis(decode_responses=True)
 
-    app.dependency_overrides[get_db] = _get_db_override
+    mock_cache_service = WeatherCacheService(redis_client=fake_redis)
 
-    with patch("app.api.v1.weather.redis_client", fake_redis):
+    async def mock_get_or_fetch(db, city, units):
+        return None
+
+    mock_cache_service.get_or_fetch = mock_get_or_fetch
+
+    with patch("app.api.v1.weather.cache_service", mock_cache_service):
+        app.dependency_overrides[get_db] = _get_db_override
+
         with TestClient(app) as c:
             yield c
 
@@ -63,7 +71,7 @@ def client(db_session):
 
 @pytest.fixture(scope="function")
 def client_with_limiter(db_session):
-    """Тестовый клиент FastAPI С ВКЛЮЧЕННЫМ rate limiter"""
+    """Тестовый клиент FastAPI С ВКЛЮЧЕННЫМ rate limiter и замоканным Redis"""
 
     def _get_db_override():
         try:
@@ -74,10 +82,16 @@ def client_with_limiter(db_session):
     limiter.enabled = True
 
     fake_redis = fakeredis.FakeRedis(decode_responses=True)
+    mock_cache_service = WeatherCacheService(redis_client=fake_redis)
 
-    app.dependency_overrides[get_db] = _get_db_override
+    async def mock_get_or_fetch(db, city, units):
+        return None
 
-    with patch("app.api.v1.weather.redis_client", fake_redis):
+    mock_cache_service.get_or_fetch = mock_get_or_fetch
+
+    with patch("app.api.v1.weather.cache_service", mock_cache_service):
+        app.dependency_overrides[get_db] = _get_db_override
+
         with TestClient(app) as c:
             yield c
 

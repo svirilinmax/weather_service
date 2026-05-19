@@ -47,7 +47,6 @@
         </div>
         <div id="history"></div>
     </div>
-
     <script>
         async function getWeather() {
             const city = document.getElementById('city').value;
@@ -57,17 +56,43 @@
                 const response = await fetch(`/api/v1/weather?city=${encodeURIComponent(city)}&units=${units}`);
                 const data = await response.json();
 
-                const cachedBadge = data.is_cached ? '<span class="badge">📦 From Cache</span>' : '<span class="api-badge">🌍 From API</span>';
+                const weatherResult = document.getElementById('weatherResult');
+                weatherResult.innerHTML = '';
 
-                document.getElementById('weatherResult').innerHTML = `
-                    <hr>
-                    <h3>${data.city}</h3>
-                    <p><strong>Temperature:</strong> ${data.temperature}°${data.units}</p>
-                    <p><strong>Description:</strong> ${data.description}</p>
-                    <p><strong>Humidity:</strong> ${data.humidity}%</p>
-                    <p><strong>Source:</strong> ${cachedBadge}</p>
-                    <p><strong>Time (UTC0):</strong> ${new Date(data.timestamp).toLocaleString()}</p>
-                `;
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Ошибка запроса');
+                }
+
+                const hr = document.createElement('hr');
+                const title = document.createElement('h3');
+                title.textContent = data.city;
+
+                const temp = document.createElement('p');
+                temp.innerHTML = `<strong>Temperature:</strong> ${data.temperature}°${data.units}`;
+
+                const desc = document.createElement('p');
+                desc.innerHTML = `<strong>Description:</strong> ${data.description}`;
+
+                const humidity = document.createElement('p');
+                humidity.innerHTML = `<strong>Humidity:</strong> ${data.humidity}%`;
+
+                const source = document.createElement('p');
+                const badge = data.is_cached ?
+                    '<span class="badge">📦 From Cache</span>' :
+                    '<span class="api-badge">🌍 From API</span>';
+                source.innerHTML = `<strong>Source:</strong> ${badge}`;
+
+                const time = document.createElement('p');
+                time.innerHTML = `<strong>Time (UTC0):</strong> ${new Date(data.timestamp).toLocaleString()}`;
+
+                weatherResult.appendChild(hr);
+                weatherResult.appendChild(title);
+                weatherResult.appendChild(temp);
+                weatherResult.appendChild(desc);
+                weatherResult.appendChild(humidity);
+                weatherResult.appendChild(source);
+                weatherResult.appendChild(time);
+
                 loadHistory();
             } catch (error) {
                 document.getElementById('weatherResult').innerHTML = `<p style="color:red">Error: ${error.message}</p>`;
@@ -88,25 +113,47 @@
                 const response = await fetch(url);
                 const data = await response.json();
 
+                const historyDiv = document.getElementById('history');
+                historyDiv.innerHTML = '';
+
                 if (data.items.length === 0) {
-                    document.getElementById('history').innerHTML = '<p>No history found.</p>';
+                    historyDiv.innerHTML = '<p>No history found.</p>';
                     return;
                 }
 
-                let html = '<table><th>City</th><th>Temperature</th><th>Description</th><th>Humidity</th><th>Source</th><th>Time</th></tr>';
+                const table = document.createElement('table');
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th>City</th>
+                        <th>Temperature</th>
+                        <th>Description</th>
+                        <th>Humidity</th>
+                        <th>Source</th>
+                        <th>Time</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                const tbody = document.createElement('tbody');
                 for (const item of data.items) {
-                    html += `<tr class="${item.is_cached ? 'cached' : ''}">
-                        <td>${item.city}</td>
-                        <td>${item.temperature}°${item.units}</td>
-                        <td>${item.description}</td>
-                        <td>${item.humidity}%</td>
-                        <td>${item.is_cached ? '📦 Cache' : '🌍 API'}</td>
-                        <td>${new Date(item.timestamp).toLocaleString()}</td>
-                     </tr>`;
+                    const row = tbody.insertRow();
+                    if (item.is_cached) row.className = 'cached';
+
+                    row.insertCell(0).textContent = item.city;
+                    row.insertCell(1).textContent = `${item.temperature}°${item.units}`;
+                    row.insertCell(2).textContent = item.description;
+                    row.insertCell(3).textContent = `${item.humidity}%`;
+                    row.insertCell(4).textContent = item.is_cached ? '📦 Cache' : '🌍 API';
+                    row.insertCell(5).textContent = new Date(item.timestamp).toLocaleString();
                 }
-                html += '</table>';
-                html += `<p>Page ${data.page} of ${Math.ceil(data.total / data.size)} (Total: ${data.total} requests)</p>`;
-                document.getElementById('history').innerHTML = html;
+                table.appendChild(tbody);
+
+                historyDiv.appendChild(table);
+
+                const pagination = document.createElement('p');
+                pagination.textContent = `Page ${data.page} of ${Math.ceil(data.total / data.size)} (Total: ${data.total} requests)`;
+                historyDiv.appendChild(pagination);
             } catch (error) {
                 document.getElementById('history').innerHTML = `<p style="color:red">Error loading history: ${error.message}</p>`;
             }
@@ -127,7 +174,6 @@
             window.open(url, '_blank');
         }
 
-        // Загружаем историю при загрузке страницы
         loadHistory();
     </script>
 </body>

@@ -5,6 +5,12 @@ from sqlalchemy.exc import SQLAlchemyError
 
 def test_health_check_db_error(client, monkeypatch):
     """Тест ошибки подключения к БД"""
+    from app.api.v1 import health
+
+    async def mock_check_external():
+        return True, 100.0
+
+    monkeypatch.setattr(health, "check_external_api", mock_check_external)
 
     with patch(
         "sqlalchemy.engine.base.Connection.execute",
@@ -31,3 +37,4 @@ def test_health_check_external_api_error(client, monkeypatch):
     data = response.json()
     assert data["external_api"] == "unreachable"
     assert data["status"] == "degraded"
+    assert data["database"] == "connected"
