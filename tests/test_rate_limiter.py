@@ -9,13 +9,15 @@ def test_rate_limiter_blocks_weather_requests(client_with_limiter, monkeypatch):
     mock_weather_data = {
         "name": "London",
         "main": {"temp": 15.5, "humidity": 70},
-        "weather": [{"description": "облачно"}]
+        "weather": [{"description": "облачно"}],
     }
 
     async def mock_get_current_weather(*args, **kwargs):
         return mock_weather_data
 
-    monkeypatch.setattr(WeatherAPIClient, "get_current_weather", mock_get_current_weather)
+    monkeypatch.setattr(
+        WeatherAPIClient, "get_current_weather", mock_get_current_weather
+    )
 
     responses = []
     for i in range(settings.RATE_LIMIT_PER_MINUTE + 1):

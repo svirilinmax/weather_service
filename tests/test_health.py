@@ -1,11 +1,15 @@
 from unittest.mock import patch
+
 from sqlalchemy.exc import SQLAlchemyError
 
 
 def test_health_check_db_error(client, monkeypatch):
     """Тест ошибки подключения к БД"""
 
-    with patch("sqlalchemy.engine.base.Connection.execute", side_effect=SQLAlchemyError("DB error")):
+    with patch(
+        "sqlalchemy.engine.base.Connection.execute",
+        side_effect=SQLAlchemyError("DB error"),
+    ):
         response = client.get("/api/v1/health")
         assert response.status_code == 503
         data = response.json()

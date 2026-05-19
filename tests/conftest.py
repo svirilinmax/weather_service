@@ -1,16 +1,16 @@
+from unittest.mock import patch
+from urllib.parse import urlparse, urlunparse
+
+import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import fakeredis
-from unittest.mock import patch
 
-from app.main import app
-from app.database import Base, get_db
 from app.config import settings
 from app.core.limiter import limiter
-
-from urllib.parse import urlparse, urlunparse
+from app.database import Base, get_db
+from app.main import app
 
 
 def get_test_database_url():

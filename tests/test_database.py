@@ -1,5 +1,6 @@
 import pytest
-from app.database import get_db, SessionLocal
+
+from app.database import get_db
 
 
 def test_get_db():

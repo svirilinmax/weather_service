@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Index
+
+from sqlalchemy import Boolean, Column, DateTime, Float, Index, Integer, String
+
 from app.database import Base
 
 
@@ -18,6 +20,6 @@ class WeatherRequest(Base):
     )
 
     __table_args__ = (
-        Index('idx_city_timestamp', 'city', 'timestamp'),
-        Index('idx_timestamp', 'timestamp'),
+        Index("idx_city_timestamp", "city", "timestamp"),
+        Index("idx_timestamp", "timestamp"),
     )

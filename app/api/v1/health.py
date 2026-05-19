@@ -1,12 +1,14 @@
-import time
 import logging
+import time
+
+import httpx
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 from sqlalchemy import text
-import httpx
-from app.database import get_db
+from sqlalchemy.orm import Session
+
 from app.config import settings
+from app.database import get_db
 
 router = APIRouter(prefix="", tags=["Infrastructure"])
 logger = logging.getLogger("weather_logger")
@@ -20,14 +22,17 @@ async def check_external_api() -> tuple[bool, float]:
             params = {
                 "q": "London",
                 "appid": settings.WEATHER_API_KEY,
-                "units": "metric"
+                "units": "metric",
             }
             response = await client.get(settings.WEATHER_API_URL, params=params)
             duration = round((time.time() - start_time) * 1000, 2)
             return response.status_code == 200, duration
     except Exception as e:
         duration = round((time.time() - start_time) * 1000, 2)
-        logger.warning(f"action='external_api_health_check' status='unreachable' duration_ms={duration} error='{e}'")
+        logger.warning(
+            f"action='external_api_health_check' "
+            f"status='unreachable' duration_ms={duration} error='{e}'"
+        )
         return False, duration
 
 
@@ -65,7 +70,7 @@ async def health_check(db: Session = Depends(get_db)):
         "database_duration_ms": db_duration,
         "external_api": "reachable" if external_ok else "unreachable",
         "external_api_duration_ms": external_duration,
-        "total_duration_ms": total_duration
+        "total_duration_ms": total_duration,
     }
 
     if status == "unhealthy":

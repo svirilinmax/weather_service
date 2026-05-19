@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
 import httpx
+import pytest
+
 from app.services.weather_api import WeatherAPIClient
 
 

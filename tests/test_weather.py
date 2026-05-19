@@ -1,15 +1,11 @@
 from unittest.mock import AsyncMock
+
 from app.services.weather_api import WeatherAPIClient
 
 MOCK_WEATHER_RESPONSE = {
     "name": "Paris",
-    "main": {
-        "temp": 18.5,
-        "humidity": 65
-    },
-    "weather": [
-        {"description": "переменная облачность"}
-    ]
+    "main": {"temp": 18.5, "humidity": 65},
+    "weather": [{"description": "переменная облачность"}],
 }
 
 
